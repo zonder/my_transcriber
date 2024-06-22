@@ -2,6 +2,12 @@ from pydub import AudioSegment
 import os
 from openai import OpenAI
 
+from getpass import getpass
+from semantic_router.encoders import OpenAIEncoder
+from semantic_chunkers import StatisticalChunker
+from semantic_chunkers import CumulativeChunker
+
+
 CHUNK_DURATION_SECONDS = 90
 OUTPUT_FOLDER = "output_chunks"
 
@@ -87,17 +93,40 @@ def finalize_transcription(client, transciption):
     return completion.choices[0].message.content
 
 
-AUDIO_FILE_PATH = "PATH_TO_YOUR_FILE"
+def transcribe_audio_file(audio_file_path):
+    print("Creating audio chunks...")
+    chunk_files = split_audio(
+        audio_file_path, CHUNK_DURATION_SECONDS*1000, OUTPUT_FOLDER)
 
-print("Creating audio chunks...")
-chunk_files = split_audio(
-    AUDIO_FILE_PATH, CHUNK_DURATION_SECONDS*1000, OUTPUT_FOLDER)
+    client = OpenAI()
+    transcription = ""
+    for chunk_file in chunk_files:
+        print(F"Preparing transciption for {chunk_file}")
+        transcription += generate_corrected_transcript(
+            client, chunk_file) + "\n"
 
-client = OpenAI()
-transcription = ""
-for chunk_file in chunk_files:
-    print(F"Preparing transciption for {chunk_file}")
-    transcription += generate_corrected_transcript(client, chunk_file) + "\n"
+    return transcription
 
-with open(F"{OUTPUT_FOLDER}\output.txt", 'w', encoding='utf-8') as file:
-    file.write(transcription)
+
+def chunk_content_for_rag(text_content):
+    encoder = OpenAIEncoder(name="text-embedding-3-small")
+    # chunker = StatisticalChunker(encoder=encoder)
+    chunker = CumulativeChunker(encoder=encoder, score_threshold=0.3)
+    return chunker(docs=[text_content])
+
+
+AUDIO_FILE_PATH = "d:\Recordings\E_Builder_relationship_relaunch_2.mp3 "
+OUTPUT_FILE_PATH = F"{OUTPUT_FOLDER}\output.txt"
+
+# transcription = transcribe_audio_file(AUDIO_FILE_PATH)
+# with open(OUTPUT_FILE_PATH, 'w', encoding='utf-8') as file:
+#    file.write(transcription)
+
+with open(OUTPUT_FILE_PATH, 'r', encoding='utf-8') as file:
+    transcription = file.read()
+
+# print(transcription)
+chunks = chunk_content_for_rag(transcription)
+
+# with open(F"{OUTPUT_FOLDER}\output_chunks_cumul.txt", 'w', encoding='utf-8') as file:
+print(chunks)
