@@ -115,7 +115,7 @@ def chunk_content_for_rag(text_content):
     return chunker(docs=[text_content])
 
 
-AUDIO_FILE_PATH = "d:\Recordings\E_Builder_relationship_relaunch_2.mp3 "
+AUDIO_FILE_PATH = "AUDIO_FILE_PATH"
 OUTPUT_FILE_PATH = F"{OUTPUT_FOLDER}\output.txt"
 
 # transcription = transcribe_audio_file(AUDIO_FILE_PATH)
